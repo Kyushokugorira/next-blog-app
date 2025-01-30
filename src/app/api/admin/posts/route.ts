@@ -2,25 +2,32 @@ import prisma from "@/lib/prisma";
 import { NextResponse, NextRequest } from "next/server";
 import { Post } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { supabase } from "@/utils/supabase"; // ◀ 追加
 
 type RequestBody = {
   title: string;
   content: string;
-  coverImageURL: string;
+  coverImageKey: string;
   categoryIds: string[];
 };
 
 export const POST = async (req: NextRequest) => {
+  // JWTトークンの検証・認証 (失敗したら 401 Unauthorized を返す)
+  const token = req.headers.get("Authorization") ?? "";
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 401 });
+
   try {
     const requestBody: RequestBody = await req.json();
-    const { title, content, coverImageURL, categoryIds } = requestBody;
+    const { title, content, coverImageKey, categoryIds } = requestBody;
 
     // 投稿記事テーブルにレコードを追加
     const post: Post = await prisma.post.create({
       data: {
         title,
         content,
-        coverImageURL,
+        coverImageKey,
         // Prismaのネスト機能で関連カテゴリを同時作成（中間テーブル自動生成）
         // もし、カテゴリが存在しなければ外部キー制約違反エラー "P2003" が発生
         categories: {

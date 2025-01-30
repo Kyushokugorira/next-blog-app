@@ -1,11 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+// Import statements
+import { useState, useEffect, ChangeEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { twMerge } from "tailwind-merge";
+import { useAuth } from "@/app/_hooks/useAuth";
+import { supabase } from "@/utils/supabase";
+import CryptoJS from "crypto-js";
+import Image from "next/image";
 
-// カテゴリをフェッチしたときのレスポンスのデータ型
+// Define types needed for handling categories
 type CategoryApiResponse = {
   id: string;
   name: string;
@@ -13,14 +18,19 @@ type CategoryApiResponse = {
   updatedAt: string;
 };
 
-// 投稿記事のカテゴリ選択用のデータ型
 type SelectableCategory = {
   id: string;
   name: string;
   isSelect: boolean;
 };
 
-// 投稿記事の新規作成のページ
+// Function to calculate MD5 hash
+const calculateMD5Hash = async (file: File): Promise<string> => {
+  const buffer = await file.arrayBuffer();
+  const wordArray = CryptoJS.lib.WordArray.create(buffer);
+  return CryptoJS.MD5(wordArray).toString();
+};
+
 const Page: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,35 +39,35 @@ const Page: React.FC = () => {
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [newCoverImageURL, setNewCoverImageURL] = useState("");
+  const [newCoverImageKey, setNewCoverImageKey] = useState("");
+  const bucketName = "cover_image";
 
   const router = useRouter();
+  const { token } = useAuth();
+  const hiddenFileInputRef = useRef<HTMLInputElement>(null);
 
-  // カテゴリ配列 (State)。取得中と取得失敗時は null、既存カテゴリが0個なら []
+  // Category state
   const [checkableCategories, setCheckableCategories] = useState<
     SelectableCategory[] | null
   >(null);
 
-  // コンポーネントがマウントされたとき (初回レンダリングのとき) に1回だけ実行
+  // Fetch categories
   useEffect(() => {
-    // ウェブAPI (/api/categories) からカテゴリの一覧をフェッチする関数の定義
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
 
-        // フェッチ処理の本体
         const requestUrl = "/api/categories";
         const res = await fetch(requestUrl, {
           method: "GET",
           cache: "no-store",
         });
 
-        // レスポンスのステータスコードが200以外の場合 (カテゴリのフェッチに失敗した場合)
         if (!res.ok) {
           setCheckableCategories(null);
-          throw new Error(`${res.status}: ${res.statusText}`); // -> catch節に移動
+          throw new Error(`${res.status}: ${res.statusText}`);
         }
 
-        // レスポンスのボディをJSONとして読み取りカテゴリ配列 (State) にセット
         const apiResBody = (await res.json()) as CategoryApiResponse[];
         setCheckableCategories(
           apiResBody.map((body) => ({
@@ -74,15 +84,50 @@ const Page: React.FC = () => {
         console.error(errorMsg);
         setFetchErrorMsg(errorMsg);
       } finally {
-        // 成功した場合も失敗した場合もローディング状態を解除
         setIsLoading(false);
       }
     };
-
     fetchCategories();
   }, []);
 
-  // チェックボックスの状態 (State) を更新する関数
+  // Handling image upload
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    setNewCoverImageKey("");
+    setNewCoverImageURL("");
+
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const file = e.target.files[0];
+    const fileHash = await calculateMD5Hash(file);
+    const path = `private/${fileHash}`;
+
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(path, file, { upsert: true });
+
+    if (error || !data) {
+      window.alert(`アップロードに失敗 ${error.message}`);
+      return;
+    }
+
+    setNewCoverImageKey(data.path);
+    const publicUrlResult = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(data.path);
+    setNewCoverImageURL(publicUrlResult.data.publicUrl);
+  };
+
+  // Function to update the new title
+  const updateNewTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewTitle(e.target.value);
+  };
+
+  // Function to update the new content
+  const updateNewContent = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewContent(e.target.value);
+  };
+
+  // Function to toggle category selection
   const switchCategoryState = (categoryId: string) => {
     if (!checkableCategories) return;
 
@@ -95,28 +140,25 @@ const Page: React.FC = () => {
     );
   };
 
-  const updateNewTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // ここにタイトルのバリデーション処理を追加する
-    setNewTitle(e.target.value);
-  };
+  // Check authentication
+  if (!token) {
+    return (
+      <div className="text-red-500">
+        You need to be logged in to create a new article.
+      </div>
+    );
+  }
 
-  const updateNewContent = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // ここに本文のバリデーション処理を追加する
-    setNewContent(e.target.value);
-  };
-
-  const updateNewCoverImageURL = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // ここにカバーイメージURLのバリデーション処理を追加する
-    setNewCoverImageURL(e.target.value);
-  };
-
-  // フォームの送信処理
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // この処理をしないとページがリロードされるので注意
+    e.preventDefault();
+
+    if (!token) {
+      window.alert("You need to be logged in to create a new article.");
+      return;
+    }
 
     setIsSubmitting(true);
 
-    // ▼▼ 追加 ウェブAPI (/api/admin/posts) にPOSTリクエストを送信する処理
     try {
       const requestBody = {
         title: newTitle,
@@ -133,22 +175,23 @@ const Page: React.FC = () => {
         cache: "no-store",
         headers: {
           "Content-Type": "application/json",
+          Authorization: token,
         },
         body: JSON.stringify(requestBody),
       });
 
       if (!res.ok) {
-        throw new Error(`${res.status}: ${res.statusText}`); // -> catch節に移動
+        throw new Error(`${res.status}: ${res.statusText}`);
       }
 
       const postResponse = await res.json();
       setIsSubmitting(false);
-      router.push(`/posts/${postResponse.id}`); // 投稿記事の詳細ページに移動
+      router.push(`/posts/${postResponse.id}`);
     } catch (error) {
       const errorMsg =
         error instanceof Error
-          ? `投稿記事のPOSTリクエストに失敗しました\n${error.message}`
-          : `予期せぬエラーが発生しました\n${error}`;
+          ? `Failed to create new article\n${error.message}`
+          : "An unexpected error occurred";
       console.error(errorMsg);
       window.alert(errorMsg);
       setIsSubmitting(false);
@@ -219,20 +262,41 @@ const Page: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="coverImageURL" className="block font-bold">
-            カバーイメージ (URL)
-          </label>
+        <div>
           <input
-            type="url"
-            id="coverImageURL"
-            name="coverImageURL"
-            className="w-full rounded-md border-2 px-2 py-1"
-            value={newCoverImageURL}
-            onChange={updateNewCoverImageURL}
-            placeholder="カバーイメージのURLを記入してください"
-            required
+            id="imgSelector"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            hidden
+            ref={hiddenFileInputRef}
           />
+          <button
+            onClick={() => hiddenFileInputRef.current?.click()}
+            type="button"
+            className="rounded-md bg-indigo-500 px-3 py-1 text-white"
+          >
+            ファイルを選択
+          </button>
+          <div className="break-all text-sm">
+            coverImageKey : {newCoverImageKey}
+          </div>
+          <div className="break-all text-sm">
+            coverImageUrl : {newCoverImageURL}
+          </div>
+
+          {newCoverImageURL && (
+            <div className="mt-2">
+              <Image
+                className="w-1/2 border-2 border-gray-300"
+                src={newCoverImageURL}
+                alt="プレビュー画像"
+                width={1024}
+                height={1024}
+                priority
+              />
+            </div>
+          )}
         </div>
 
         <div className="space-y-1">

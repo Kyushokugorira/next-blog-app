@@ -4,6 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { twMerge } from "tailwind-merge";
+import { useAuth } from "@/app/_hooks/useAuth";
+import { supabase } from "@/utils/supabase";
+import Image from "next/image";
 
 type RawApiCategoryResponse = {
   id: string;
@@ -36,10 +39,12 @@ const Page: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchErrorMsg, setFetchErrorMsg] = useState<string | null>(null);
-
+  const { token } = useAuth(); // トークンの取得
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [newCoverImageURL, setNewCoverImageURL] = useState("");
+  const [coverImageKey, setCoverImageKey] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState("");
 
   const { id } = useParams() as { id: string };
   const router = useRouter();
@@ -154,8 +159,38 @@ const Page: React.FC = () => {
     setNewCoverImageURL(e.target.value);
   };
 
+  const handleFileUpload = async (file: File) => {
+    const filePath = `cover-images/${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+      .from("cover-images")
+      .upload(filePath, file);
+
+    if (error) {
+      alert("アップロードに失敗しました");
+      return;
+    }
+    setCoverImageKey(filePath);
+
+    const { data: urlData } = supabase.storage
+      .from("cover-images")
+      .getPublicUrl(filePath);
+    setCoverImageUrl(urlData.publicUrl);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!token) {
+      window.alert("予期せぬ動作：トークンが取得できません。");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -163,6 +198,8 @@ const Page: React.FC = () => {
         title: newTitle,
         content: newContent,
         coverImageURL: newCoverImageURL,
+        coverImageKey: coverImageKey,
+        coverImageUrl: coverImageUrl,
         categoryIds: checkableCategories
           ? checkableCategories.filter((c) => c.isSelect).map((c) => c.id)
           : [],
@@ -175,6 +212,7 @@ const Page: React.FC = () => {
         cache: "no-store",
         headers: {
           "Content-Type": "application/json",
+          Authorization: token, // ◀ 追加
         },
         body: JSON.stringify(requestBody),
       });
@@ -276,6 +314,27 @@ const Page: React.FC = () => {
             placeholder="カバーイメージのURLを記入してください"
             required
           />
+        </div>
+
+        <div className="space-y-1">
+          <label className="block font-bold">カバー画像アップロード</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="mt-1 w-full rounded-md border-2 px-2 py-1"
+          />
+          {coverImageUrl && (
+            <div className="mt-2">
+              <Image
+                src={coverImageUrl}
+                alt="プレビュー画像"
+                width={300}
+                height={300}
+                className="border border-gray-300"
+              />
+            </div>
+          )}
         </div>
 
         <div className="space-y-1">

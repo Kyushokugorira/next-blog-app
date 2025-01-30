@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { NextResponse, NextRequest } from "next/server";
 import { Post } from "@prisma/client";
+import { supabase } from "@/utils/supabase"; // ◀ 追加
 
 type RouteParams = {
   params: {
@@ -11,17 +12,22 @@ type RouteParams = {
 type RequestBody = {
   title: string;
   content: string;
-  coverImageURL: string;
+  coverImageKey: string;
   categoryIds: string[];
 };
 
 export const PUT = async (req: NextRequest, routeParams: RouteParams) => {
+  const token = req.headers.get("Authorization") ?? "";
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 401 });
+
   try {
     const id = routeParams.params.id;
     const requestBody: RequestBody = await req.json();
 
     // 分割代入
-    const { title, content, coverImageURL, categoryIds } = requestBody;
+    const { title, content, coverImageKey, categoryIds } = requestBody;
 
     // categoryIds に該当するカテゴリが存在するか確認
     const categories = await prisma.category.findMany({
@@ -46,7 +52,7 @@ export const PUT = async (req: NextRequest, routeParams: RouteParams) => {
       data: {
         title, // title: title の省略形であることに注意。以下も同様
         content,
-        coverImageURL,
+        coverImageKey,
       },
     });
 
@@ -71,6 +77,11 @@ export const PUT = async (req: NextRequest, routeParams: RouteParams) => {
 };
 
 export const DELETE = async (req: NextRequest, routeParams: RouteParams) => {
+  const token = req.headers.get("Authorization") ?? "";
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 401 });
+
   try {
     const id = routeParams.params.id;
     const post: Post = await prisma.post.delete({
