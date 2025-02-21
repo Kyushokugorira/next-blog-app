@@ -159,12 +159,21 @@ const Page: React.FC = () => {
       return;
     }
 
+    if (!token) {
+      window.alert("予期せぬ動作：トークンが取得できません。");
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
       const requestUrl = `/api/admin/categories/${id}`;
       const res = await fetch(requestUrl, {
         method: "DELETE",
         cache: "no-store",
+        headers: {
+          Authorization: token, // ◀ 追加
+        },
       });
 
       if (!res.ok) {

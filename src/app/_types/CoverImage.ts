@@ -1,5 +1,5 @@
-export type CoverImage = {
-  url: string;
-  width: number;
-  height: number;
-};
+// export type CoverImage = {
+//   url: string;
+//   width: number;
+//   height: number;
+// };

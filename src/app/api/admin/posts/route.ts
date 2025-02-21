@@ -7,7 +7,7 @@ import { supabase } from "@/utils/supabase"; // ◀ 追加
 type RequestBody = {
   title: string;
   content: string;
-  coverImageKey: string;
+  // coverImageKey: string;
   categoryIds: string[];
 };
 
@@ -20,14 +20,14 @@ export const POST = async (req: NextRequest) => {
 
   try {
     const requestBody: RequestBody = await req.json();
-    const { title, content, coverImageKey, categoryIds } = requestBody;
+    const { title, content, categoryIds } = requestBody;
 
     // 投稿記事テーブルにレコードを追加
     const post: Post = await prisma.post.create({
       data: {
         title,
         content,
-        coverImageKey,
+        // coverImageKey,
         // Prismaのネスト機能で関連カテゴリを同時作成（中間テーブル自動生成）
         // もし、カテゴリが存在しなければ外部キー制約違反エラー "P2003" が発生
         categories: {

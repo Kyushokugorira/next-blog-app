@@ -1,5 +1,5 @@
 import { Category } from "./Category";
-import { CoverImage } from "./CoverImage";
+// import { CoverImage } from "./CoverImage";
 
 export type Post = {
   id: string;
@@ -7,5 +7,5 @@ export type Post = {
   content: string;
   createdAt: string;
   categories: Category[];
-  coverImage: CoverImage;
+  // coverImage: CoverImage;
 };

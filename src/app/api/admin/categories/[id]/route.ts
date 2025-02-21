@@ -9,14 +9,13 @@ type RouteParams = {
   };
 };
 
-// ▼▼▼ 追加: ここから ▼▼▼
 type RequestBody = {
   name: string;
 };
 
 export const PUT = async (req: NextRequest, routeParams: RouteParams) => {
   // JWTトークンの検証・認証 (失敗したら 401 Unauthorized を返す)
-  const token = req.headers.get("Authorization") ?? "";
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
   const { data, error } = await supabase.auth.getUser(token);
   if (error)
     return NextResponse.json({ error: error.message }, { status: 401 });
@@ -37,11 +36,10 @@ export const PUT = async (req: NextRequest, routeParams: RouteParams) => {
     );
   }
 };
-// ▲▲▲ 追加: ここまで ▲▲▲
 
 export const DELETE = async (req: NextRequest, routeParams: RouteParams) => {
   // JWTトークンの検証・認証 (失敗したら 401 Unauthorized を返す)
-  const token = req.headers.get("Authorization") ?? "";
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
   const { data, error } = await supabase.auth.getUser(token);
   if (error)
     return NextResponse.json({ error: error.message }, { status: 401 });

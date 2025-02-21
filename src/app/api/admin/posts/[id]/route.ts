@@ -12,7 +12,7 @@ type RouteParams = {
 type RequestBody = {
   title: string;
   content: string;
-  coverImageKey: string;
+  // coverImageKey: string;
   categoryIds: string[];
 };
 
@@ -27,7 +27,7 @@ export const PUT = async (req: NextRequest, routeParams: RouteParams) => {
     const requestBody: RequestBody = await req.json();
 
     // 分割代入
-    const { title, content, coverImageKey, categoryIds } = requestBody;
+    const { title, content, categoryIds } = requestBody;
 
     // categoryIds に該当するカテゴリが存在するか確認
     const categories = await prisma.category.findMany({
@@ -52,7 +52,7 @@ export const PUT = async (req: NextRequest, routeParams: RouteParams) => {
       data: {
         title, // title: title の省略形であることに注意。以下も同様
         content,
-        coverImageKey,
+        // coverImageKey,
       },
     });
 

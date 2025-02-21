@@ -8,7 +8,7 @@ import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/app/_hooks/useAuth";
 import { supabase } from "@/utils/supabase";
 import CryptoJS from "crypto-js";
-import Image from "next/image";
+// import Image from "next/image";
 
 // Define types needed for handling categories
 type CategoryApiResponse = {
@@ -38,8 +38,8 @@ const Page: React.FC = () => {
 
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
-  const [newCoverImageURL, setNewCoverImageURL] = useState("");
-  const [newCoverImageKey, setNewCoverImageKey] = useState("");
+  // const [newCoverImageURL, setNewCoverImageURL] = useState("");
+  // const [newCoverImageKey, setNewCoverImageKey] = useState("");
   const bucketName = "cover_image";
 
   const router = useRouter();
@@ -91,31 +91,31 @@ const Page: React.FC = () => {
   }, []);
 
   // Handling image upload
-  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    setNewCoverImageKey("");
-    setNewCoverImageURL("");
+  // const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  //   setNewCoverImageKey("");
+  //   setNewCoverImageURL("");
 
-    if (!e.target.files || e.target.files.length === 0) return;
+  //   if (!e.target.files || e.target.files.length === 0) return;
 
-    const file = e.target.files[0];
-    const fileHash = await calculateMD5Hash(file);
-    const path = `private/${fileHash}`;
+  //   const file = e.target.files[0];
+  //   const fileHash = await calculateMD5Hash(file);
+  //   const path = `private/${fileHash}`;
 
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .upload(path, file, { upsert: true });
+  //   const { data, error } = await supabase.storage
+  //     .from(bucketName)
+  //     .upload(path, file, { upsert: true });
 
-    if (error || !data) {
-      window.alert(`アップロードに失敗 ${error.message}`);
-      return;
-    }
+  //   if (error || !data) {
+  //     window.alert(`アップロードに失敗 ${error.message}`);
+  //     return;
+  //   }
 
-    setNewCoverImageKey(data.path);
-    const publicUrlResult = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(data.path);
-    setNewCoverImageURL(publicUrlResult.data.publicUrl);
-  };
+  //   setNewCoverImageKey(data.path);
+  //   const publicUrlResult = supabase.storage
+  //     .from(bucketName)
+  //     .getPublicUrl(data.path);
+  //   setNewCoverImageURL(publicUrlResult.data.publicUrl);
+  // };
 
   // Function to update the new title
   const updateNewTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,7 +163,7 @@ const Page: React.FC = () => {
       const requestBody = {
         title: newTitle,
         content: newContent,
-        coverImageURL: newCoverImageURL,
+        // coverImageURL: newCoverImageURL,
         categoryIds: checkableCategories
           ? checkableCategories.filter((c) => c.isSelect).map((c) => c.id)
           : [],
@@ -262,7 +262,7 @@ const Page: React.FC = () => {
           />
         </div>
 
-        <div>
+        {/* <div>
           <input
             id="imgSelector"
             type="file"
@@ -297,7 +297,7 @@ const Page: React.FC = () => {
               />
             </div>
           )}
-        </div>
+        </div> */}
 
         <div className="space-y-1">
           <div className="font-bold">タグ</div>

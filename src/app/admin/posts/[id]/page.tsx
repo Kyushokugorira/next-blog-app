@@ -1,12 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/app/_hooks/useAuth";
 import { supabase } from "@/utils/supabase";
-import Image from "next/image";
+import CryptoJS from "crypto-js";
+// import Image from "next/image";
 
 type RawApiCategoryResponse = {
   id: string;
@@ -19,7 +20,7 @@ type PostApiResponse = {
   id: string;
   title: string;
   content: string;
-  coverImageURL: string;
+  // coverImageURL: string;
   createdAt: string;
   categories: {
     category: {
@@ -42,9 +43,7 @@ const Page: React.FC = () => {
   const { token } = useAuth(); // トークンの取得
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
-  const [newCoverImageURL, setNewCoverImageURL] = useState("");
-  const [coverImageKey, setCoverImageKey] = useState("");
-  const [coverImageUrl, setCoverImageUrl] = useState("");
+  // const [newCoverImageURL, setNewCoverImageURL] = useState("");
 
   const { id } = useParams() as { id: string };
   const router = useRouter();
@@ -55,6 +54,18 @@ const Page: React.FC = () => {
 
   const [rawApiPostResponse, setRawApiPostResponse] =
     useState<PostApiResponse | null>(null);
+
+  // Function to calculate MD5 hash
+  const calculateMD5Hash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const wordArray = CryptoJS.lib.WordArray.create(buffer);
+    return CryptoJS.MD5(wordArray).toString();
+  };
+
+  // State variables for the cover image
+  // const [coverImageUrl, setCoverImageUrl] = useState<string | undefined>();
+  // const [coverImageKey, setCoverImageKey] = useState<string | undefined>();
+  const hiddenFileInputRef = useRef<HTMLInputElement>(null); // Reference to the hidden file input
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -121,7 +132,7 @@ const Page: React.FC = () => {
 
     setNewTitle(rawApiPostResponse.title);
     setNewContent(rawApiPostResponse.content);
-    setNewCoverImageURL(rawApiPostResponse.coverImageURL);
+    // setNewCoverImageURL(rawApiPostResponse.coverImageURL);
 
     const selectedIds = new Set(
       rawApiPostResponse.categories.map((c) => c.category.id)
@@ -155,9 +166,9 @@ const Page: React.FC = () => {
     setNewContent(e.target.value);
   };
 
-  const updateNewCoverImageURL = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewCoverImageURL(e.target.value);
-  };
+  // const updateNewCoverImageURL = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   setNewCoverImageURL(e.target.value);
+  // };
 
   const handleFileUpload = async (file: File) => {
     const filePath = `cover-images/${Date.now()}-${file.name}`;
@@ -169,12 +180,12 @@ const Page: React.FC = () => {
       alert("アップロードに失敗しました");
       return;
     }
-    setCoverImageKey(filePath);
+    // setCoverImageKey(filePath);
 
     const { data: urlData } = supabase.storage
       .from("cover-images")
       .getPublicUrl(filePath);
-    setCoverImageUrl(urlData.publicUrl);
+    // setCoverImageUrl(urlData.publicUrl);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,9 +208,9 @@ const Page: React.FC = () => {
       const requestBody = {
         title: newTitle,
         content: newContent,
-        coverImageURL: newCoverImageURL,
-        coverImageKey: coverImageKey,
-        coverImageUrl: coverImageUrl,
+        // coverImageURL: newCoverImageURL,
+        // coverImageKey: coverImageKey,
+        // coverImageUrl: coverImageUrl,
         categoryIds: checkableCategories
           ? checkableCategories.filter((c) => c.isSelect).map((c) => c.id)
           : [],
@@ -233,6 +244,29 @@ const Page: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  // const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  //   setCoverImageKey(undefined);
+  //   setCoverImageUrl(undefined);
+
+  //   if (!e.target.files || e.target.files.length === 0) return;
+  //   const file = e.target.files[0];
+  //   const fileHash = await calculateMD5Hash(file);
+  //   const path = `private/${fileHash}`;
+  //   const { data, error } = await supabase.storage
+  //     .from("cover_image")
+  //     .upload(path, file, { upsert: true });
+
+  //   if (error || !data) {
+  //     window.alert(`アップロードに失敗 ${error.message}`);
+  //     return;
+  //   }
+  //   setCoverImageKey(data.path);
+  //   const publicUrlResult = supabase.storage
+  //     .from("cover_image")
+  //     .getPublicUrl(data.path);
+  //   setCoverImageUrl(publicUrlResult.data.publicUrl);
+  // };
 
   if (fetchErrorMsg) {
     return <div className="text-center text-red-500">{fetchErrorMsg}</div>;
@@ -300,31 +334,31 @@ const Page: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="coverImageURL" className="block font-bold">
-            カバーイメージ (URL)
-          </label>
-          <input
-            type="url"
-            id="coverImageURL"
-            name="coverImageURL"
-            className="w-full rounded-md border-2 px-2 py-1 focus:ring-2 focus:ring-indigo-300"
-            value={newCoverImageURL}
-            onChange={updateNewCoverImageURL}
-            placeholder="カバーイメージのURLを記入してください"
-            required
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="block font-bold">カバー画像アップロード</label>
-          <input
+        {/* <div> */}
+        {/* <input
+            id="imgSelector"
             type="file"
             accept="image/*"
-            onChange={handleFileChange}
-            className="mt-1 w-full rounded-md border-2 px-2 py-1"
+            // onChange={handleImageChange}
+            hidden
+            ref={hiddenFileInputRef}
           />
-          {coverImageUrl && (
+          <button
+            onClick={() => hiddenFileInputRef.current?.click()}
+            type="button"
+            className="rounded-md bg-indigo-500 px-3 py-1 text-white"
+          >
+            ファイルを選択
+          </button> */}
+
+        {/* <div className="break-all text-sm">
+            coverImageKey : {coverImageKey}
+          </div>
+          <div className="break-all text-sm">
+            coverImageUrl : {coverImageUrl}
+          </div> */}
+
+        {/* {coverImageUrl && (
             <div className="mt-2">
               <Image
                 src={coverImageUrl}
@@ -334,8 +368,8 @@ const Page: React.FC = () => {
                 className="border border-gray-300"
               />
             </div>
-          )}
-        </div>
+          )} */}
+        {/* </div> */}
 
         <div className="space-y-1">
           <div className="font-bold">タグ</div>

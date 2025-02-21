@@ -6,7 +6,7 @@ import type { Post } from "@/app/_types/Post";
 import type { PostApiResponse } from "@/app/_types/PostApiResponse";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-import Image from "next/image";
+// import Image from "next/image";
 
 import DOMPurify from "isomorphic-dompurify";
 
@@ -36,11 +36,11 @@ const Page: React.FC = () => {
           id: postApiResponse.id,
           title: postApiResponse.title,
           content: postApiResponse.content,
-          coverImage: {
-            url: postApiResponse.coverImageURL,
-            width: 1000,
-            height: 1000,
-          },
+          // coverImage: {
+          //   url: postApiResponse.coverImageKey,
+          //   width: 1000,
+          //   height: 1000,
+          // },
           createdAt: postApiResponse.createdAt,
           categories: postApiResponse.categories.map((category) => ({
             id: category.category.id,
@@ -86,7 +86,7 @@ const Page: React.FC = () => {
     <main>
       <div className="space-y-2">
         <div className="mb-2 text-2xl font-bold">{post.title}</div>
-        <div>
+        {/* <div>
           <Image
             src={post.coverImage.url}
             alt="Example Image"
@@ -95,7 +95,7 @@ const Page: React.FC = () => {
             priority
             className="rounded-xl"
           />
-        </div>
+        </div> */}
         <div dangerouslySetInnerHTML={{ __html: safeHTML }} />
       </div>
     </main>
